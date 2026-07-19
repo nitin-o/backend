@@ -1,6 +1,6 @@
 import User from "../models/user.model.js";
 
-export const registerUser = async (req, res) => {
+const registerUser = async (req, res) => {
   try {
     const { fullName, username, email, password } = req.body;
 
@@ -24,11 +24,10 @@ export const registerUser = async (req, res) => {
 
     const user = await User.create({
       fullName,
-      username,
-      email,
+      username: username.toLowerCase(),
+      email: email.toLowerCase(),
       password,
     });
-    
 
     const createdUser = await User.findById(user._id).select(
       "-password -refreshToken"
@@ -36,8 +35,10 @@ export const registerUser = async (req, res) => {
 
     return res.status(201).json({
       success: true,
-      data: createdUser,
+      message: "User registered successfully",
+      user: createdUser,
     });
+
   } catch (error) {
     return res.status(500).json({
       success: false,
@@ -46,9 +47,16 @@ export const registerUser = async (req, res) => {
   }
 };
 
-export const loginUser = async (req, res) => {
+const loginUser = async (req, res) => {
   try {
     const { email, username, password } = req.body;
+
+    if ((!email && !username) || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Email/Username and password are required",
+      });
+    }
 
     const user = await User.findOne({
       $or: [{ email }, { username }],
@@ -61,12 +69,12 @@ export const loginUser = async (req, res) => {
       });
     }
 
-    const valid = await user.isPasswordCorrect(password);
+    const isPasswordValid = await user.isPasswordCorrect(password);
 
-    if (!valid) {
+    if (!isPasswordValid) {
       return res.status(401).json({
         success: false,
-        message: "Invalid password",
+        message: "Invalid credentials",
       });
     }
 
@@ -76,15 +84,51 @@ export const loginUser = async (req, res) => {
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
 
-    res.status(200).json({
+    const loggedInUser = await User.findById(user._id).select(
+      "-password -refreshToken"
+    );
+
+    return res.status(200).json({
       success: true,
+      message: "Login successful",
+      user: loggedInUser,
       accessToken,
       refreshToken,
     });
+
   } catch (error) {
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       message: error.message,
     });
   }
+};
+
+const logoutUser = async (req, res) => {
+  try {
+    const { userId } = req.body;
+
+    await User.findByIdAndUpdate(userId, {
+      $set: {
+        refreshToken: "",
+      },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "Logout successful",
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export {
+  registerUser,
+  loginUser,
+  logoutUser,
 };
