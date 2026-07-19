@@ -1,22 +1,55 @@
 import User from "../models/user.model.js";
 
-const registerUser = async (req, res) => {
-  // Your existing register code
-};
-
-const loginUser = async (req, res) => {
+export const registerUser = async (req, res) => {
   try {
-    const { email, username, password } = req.body;
+    const { fullName, username, email, password } = req.body;
 
-    // Require either email or username, plus password
-    if ((!email && !username) || !password) {
+    if (!fullName || !username || !email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email/Username and password are required",
+        message: "All fields are required",
       });
     }
 
-    // Find user
+    const existedUser = await User.findOne({
+      $or: [{ email }, { username }],
+    });
+
+    if (existedUser) {
+      return res.status(409).json({
+        success: false,
+        message: "User already exists",
+      });
+    }
+
+    const user = await User.create({
+      fullName,
+      username,
+      email,
+      password,
+    });
+    
+
+    const createdUser = await User.findById(user._id).select(
+      "-password -refreshToken"
+    );
+
+    return res.status(201).json({
+      success: true,
+      data: createdUser,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+export const loginUser = async (req, res) => {
+  try {
+    const { email, username, password } = req.body;
+
     const user = await User.findOne({
       $or: [{ email }, { username }],
     });
@@ -28,45 +61,30 @@ const loginUser = async (req, res) => {
       });
     }
 
-    // Verify password
-    const isPasswordValid = await user.isPasswordCorrect(password);
+    const valid = await user.isPasswordCorrect(password);
 
-    if (!isPasswordValid) {
+    if (!valid) {
       return res.status(401).json({
         success: false,
-        message: "Invalid credentials",
+        message: "Invalid password",
       });
     }
 
-    // Generate tokens
     const accessToken = user.generateAccessToken();
     const refreshToken = user.generateRefreshToken();
 
-    // Save refresh token
     user.refreshToken = refreshToken;
     await user.save({ validateBeforeSave: false });
 
-    // Remove sensitive fields
-    const loggedInUser = await User.findById(user._id).select(
-      "-password -refreshToken"
-    );
-
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
-      message: "Login successful",
-      user: loggedInUser,
       accessToken,
       refreshToken,
     });
   } catch (error) {
-    return res.status(500).json({
+    res.status(500).json({
       success: false,
       message: error.message,
     });
   }
-};
-
-export {
-  registerUser,
-  loginUser,
 };
