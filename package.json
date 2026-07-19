@@ -1,0 +1,21 @@
+{
+  "name": "iot-platform",
+  "version": "1.0.0",
+  "description": "��",
+  "homepage": "https://github.com/nitin-o/backend#readme",
+  "bugs": {
+    "url": "https://github.com/nitin-o/backend/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nitin-o/backend.git"
+  },
+  "license": "ISC",
+  "author": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node index.js "
+  }
+}
