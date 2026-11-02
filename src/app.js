@@ -14,7 +14,7 @@ app.get("/", (req, res) => {
     res.status(200).json({
         success: true,
         statusCode: 200,
-        message: "Server is running111111111111111111111111111111111111",
+        message: "Server is running",
         data: {
             name: "IoT Platform API",
             version: "1.0.0"
