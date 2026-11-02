@@ -12,9 +12,9 @@ app.use(cookieParser());
 
 app.get("/", (req, res) => {
     res.status(200).json({
-        success: true1111111111111111111111111111111111111,
+        success: true,
         statusCode: 200,
-        message: "Server is running",
+        message: "Server is running111111111111111111111111111111111111",
         data: {
             name: "IoT Platform API",
             version: "1.0.0"
