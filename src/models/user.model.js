@@ -30,10 +30,6 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-
-    refreshToken: {
-      type: String,
-    },
   },
   {
     timestamps: true,
@@ -55,12 +51,14 @@ userSchema.methods.isPasswordCorrect = async function (password) {
 };
 
 // Access Token
-userSchema.methods.generateAccessToken = function () {
+
+userSchema.methods.generateAccessToken = function (sessionId) {
   return jwt.sign(
     {
       _id: this._id,
       email: this.email,
       username: this.username,
+      sid: sessionId,
     },
     process.env.ACCESS_TOKEN_SECRET,
     {
@@ -69,17 +67,19 @@ userSchema.methods.generateAccessToken = function () {
   );
 };
 
+
 // Refresh Token
-userSchema.methods.generateRefreshToken = function () {
-  return jwt.sign(
-    {
-      _id: this._id,
-    },
-    process.env.REFRESH_TOKEN_SECRET,
-    {
-      expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
-    }
-  );
+userSchema.methods.generateRefreshToken = function (sessionId) {
+    return jwt.sign(
+        {
+            _id: this._id,
+            sid: sessionId,
+        },
+        process.env.REFRESH_TOKEN_SECRET,
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY,
+        }
+    );
 };
 
 export default mongoose.model("User", userSchema);
