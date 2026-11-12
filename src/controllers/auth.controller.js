@@ -96,8 +96,8 @@ const loginUser = async (req, res) => {
       refreshTokenHash: hashToken(refreshToken),
       deviceInfo: req.get("user-agent") || "Unknown Device",
       clientType: ["android", "web", "other"].includes(req.body.clientType)
-    ? req.body.clientType
-    : "other",
+        ? req.body.clientType
+        : "other",
       expiresAt: getTokenExpiryDate(refreshToken),
     });
 
@@ -146,122 +146,121 @@ const logoutUser = async (req, res) => {
 
 // Refresh Access Token
 const refreshAccessToken = async (req, res) => {
-    try {
-        const incomingRefreshToken =
-            req.body.refreshToken ||
-            req.cookies?.refreshToken;
+  try {
+    const incomingRefreshToken =
+      req.body.refreshToken ||
+      req.cookies?.refreshToken;
 
-        if (!incomingRefreshToken) {
-            return res.status(401).json({
-                success: false,
-                message: "Refresh token is required.",
-            });
-        }
-
-        // Verify Refresh Token
-        let decodedToken;
-
-        try {
-            decodedToken = jwt.verify(
-                incomingRefreshToken,
-                process.env.REFRESH_TOKEN_SECRET
-            );
-        } catch (error) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid or expired refresh token.",
-            });
-        }
-
-        if (!decodedToken.sid || !decodedToken._id) {
-            return res.status(401).json({
-                success: false,
-                message: "Invalid refresh token session.",
-            });
-        }
-
-        // Find active Session
-        const session = await Session.findOne({
-            _id: decodedToken.sid,
-            user: decodedToken._id,
-            revokedAt: null,
-            expiresAt: { $gt: new Date() },
-        }).select("+refreshTokenHash");
-
-        if (!session) {
-            return res.status(401).json({
-                success: false,
-                message: "Session expired or revoked. Please login again.",
-            });
-        }
-
-        // Verify Refresh Token Hash
-        const incomingTokenHash = hashToken(incomingRefreshToken);
-
-        if (incomingTokenHash !== session.refreshTokenHash) {
-            session.revokedAt = new Date();
-            await session.save();
-
-            return res.status(401).json({
-                success: false,
-                message: "Refresh token reuse detected. Please login again.",
-            });
-        }
-
-        // Find User
-        const user = await User.findById(decodedToken._id);
-
-        if (!user) {
-            return res.status(401).json({
-                success: false,
-                message: "User not found.",
-            });
-        }
-
-        // Generate New Tokens
-        const newAccessToken = user.generateAccessToken(session._id);
-        const newRefreshToken = user.generateRefreshToken(session._id);
-
-        // Update Session with New Refresh Token Hash
-        session.refreshTokenHash = hashToken(newRefreshToken);
-        session.expiresAt = getTokenExpiryDate(newRefreshToken);
-        session.lastUsedAt = new Date();
-
-        await session.save();
-
-        return res.status(200).json({
-            success: true,
-            message: "Tokens refreshed successfully.",
-            accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
-        });
-
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
+    if (!incomingRefreshToken) {
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token is required.",
+      });
     }
+
+    // Verify Refresh Token
+    let decodedToken;
+
+    try {
+      decodedToken = jwt.verify(
+        incomingRefreshToken,
+        process.env.REFRESH_TOKEN_SECRET
+      );
+    } catch (error) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid or expired refresh token.",
+      });
+    }
+
+    if (!decodedToken.sid || !decodedToken._id) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid refresh token session.",
+      });
+    }
+
+    // Find active Session
+    const session = await Session.findOne({
+      _id: decodedToken.sid,
+      user: decodedToken._id,
+      revokedAt: null,
+      expiresAt: { $gt: new Date() },
+    }).select("+refreshTokenHash");
+
+    if (!session) {
+      return res.status(401).json({
+        success: false,
+        message: "Session expired or revoked. Please login again.",
+      });
+    }
+
+    // Verify Refresh Token Hash
+    const incomingTokenHash = hashToken(incomingRefreshToken);
+
+    if (incomingTokenHash !== session.refreshTokenHash) {
+      session.revokedAt = new Date();
+      await session.save();
+
+      return res.status(401).json({
+        success: false,
+        message: "Refresh token reuse detected. Please login again.",
+      });
+    }
+
+    // Find User
+    const user = await User.findById(decodedToken._id);
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    // Generate New Tokens
+    const newAccessToken = user.generateAccessToken(session._id);
+    const newRefreshToken = user.generateRefreshToken(session._id);
+
+    // Update Session with New Refresh Token Hash
+    session.refreshTokenHash = hashToken(newRefreshToken);
+    session.expiresAt = getTokenExpiryDate(newRefreshToken);
+    session.lastUsedAt = new Date();
+
+    await session.save();
+
+    return res.status(200).json({
+      success: true,
+      message: "Tokens refreshed successfully.",
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
 };
-
-
 
 // Get Current Logged-in User
 const getCurrentUser = async (req, res) => {
-    try {
-        return res.status(200).json({
-            success: true,
-            message: "Current user fetched successfully",
-            user: req.user,
-        });
-    } catch (error) {
-        return res.status(500).json({
-            success: false,
-            message: error.message,
-        });
-    }
-};
+  try {
+    // Prevent browser caching of sensitive user information
+    res.set("Cache-Control", "no-store");
 
+    return res.status(200).json({
+      success: true,
+      message: "Current user fetched successfully",
+      user: req.user,
+    });
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 export {
   registerUser,
