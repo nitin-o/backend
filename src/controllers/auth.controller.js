@@ -10,32 +10,30 @@ import jwt from "jsonwebtoken";
 // Register User
 const registerUser = async (req, res) => {
   try {
-    const fullName = req.body.fullName?.trim();
-    const username = req.body.username?.trim().toLowerCase();
+    const firstName = req.body.firstName?.trim();
+    const lastName = req.body.lastName?.trim();
     const email = req.body.email?.trim().toLowerCase();
     const password = req.body.password;
 
-    if (!fullName || !username || !email || !password) {
+    if (!firstName || !lastName || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "All fields are required",
       });
     }
 
-    const existedUser = await User.findOne({
-      $or: [{ email }, { username }],
-    });
+    const existedUser = await User.findOne({ email });
 
     if (existedUser) {
       return res.status(409).json({
         success: false,
-        message: "User already exists",
+        message: "Email already registered",
       });
     }
 
     const user = await User.create({
-      fullName,
-      username,
+      firstName,
+      lastName,
       email,
       password,
     });
@@ -59,26 +57,21 @@ const registerUser = async (req, res) => {
 const loginUser = async (req, res) => {
   try {
     const email = req.body.email?.trim().toLowerCase();
-    const username = req.body.username?.trim().toLowerCase();
     const password = req.body.password;
 
-    if ((!email && !username) || !password) {
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: "Email/Username and password are required",
+        message: "Email and password are required",
       });
     }
 
-    const conditions = [];
-    if (email) conditions.push({ email });
-    if (username) conditions.push({ username });
-
-    const user = await User.findOne({ $or: conditions });
+    const user = await User.findOne({ email });
 
     if (!user || !(await user.isPasswordCorrect(password))) {
       return res.status(401).json({
         success: false,
-        message: "Invalid email/username or password",
+        message: "Invalid email or password",
       });
     }
 
@@ -246,7 +239,6 @@ const refreshAccessToken = async (req, res) => {
 // Get Current Logged-in User
 const getCurrentUser = async (req, res) => {
   try {
-    // Prevent browser caching of sensitive user information
     res.set("Cache-Control", "no-store");
 
     return res.status(200).json({
